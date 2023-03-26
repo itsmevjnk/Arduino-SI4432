@@ -157,16 +157,16 @@ bool Si4432::sendPacket(uint8_t length, const byte* data) {
 
 		byte intStatus = ReadRegister(REG_INT_STATUS1);
 		//ReadRegister(REG_INT_STATUS2);
-//#ifdef DEBUG
+#ifdef DEBUG
 		Serial.print("sendPacket REG_INT_STATUS1=");
 		Serial.println(intStatus, HEX);
-//#endif
+#endif
 		
 		//if (intStatus & 0x04) { // Packet Sent Interrupt
-		if ( (intStatus & 0x04) == 0x04 || (intStatus & 0x20) == 0x20) { // TX FIFO Almost Empty.
-			//switchMode(Ready | TuneMode);
+		if ( (intStatus & 0x04) == 0x04) { // TX FIFO Almost Empty.
+			switchMode(Ready | TuneMode);
 			//Serial.println("softReset");
-			softReset(); // nop
+			//softReset(); // nop
 			return true;
 		} // endif
 		yield();
