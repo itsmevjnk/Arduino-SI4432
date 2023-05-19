@@ -52,8 +52,9 @@ void Si4432::setCommsSignature(uint16_t signature) {
 #endif
 }
 
-bool Si4432::init(SPIClass* spi) {
+bool Si4432::init(SPIClass* spi, uint8_t* config) {
 	_spi = spi;
+	_config = config;
 	
 	if (_intPin != 0)
 		pinMode(_intPin, INPUT);
@@ -98,34 +99,48 @@ bool Si4432::init(SPIClass* spi) {
 }
 
 void Si4432::boot() {
-	/*
-	 byte currentFix[] = { 0x80, 0x40, 0x7F };
-	 BurstWrite(REG_CHARGEPUMP_OVERRIDE, currentFix, 3); // refer to AN440 for reasons
+	if(_config != NULL) {
+		/* init from config */
+		BurstWrite(REG_IF_FILTER_BW, (byte*)&_config[0], 3);
+		BurstWrite(REG_CLOCK_RECOVERY_OVERSAMPLING, (byte*)&_config[3], 6);
+		BurstWrite(REG_AFC_LIMITER, (byte*)&_config[9], 1);
+		BurstWrite(REG_DATAACCESS_CONTROL, (byte*)&_config[10], 1);
+		BurstWrite(REG_HEADER_CONTROL1, (byte*)&_config[11], 12);
+		BurstWrite(REG_CHECK_HEADER3, (byte*)&_config[23], 8);
+		BurstWrite(REG_AGC_OVERRIDE, (byte*)&_config[31], 1);
+		BurstWrite(REG_TX_POWER, (byte*)&_config[32], 6);
+		BurstWrite(REG_FREQBAND, (byte*)&_config[38], 3);
+		BurstWrite(REG_FREQCHANNEL, (byte*)&_config[41], 2);
+	} else {
+		/*
+		byte currentFix[] = { 0x80, 0x40, 0x7F };
+		BurstWrite(REG_CHARGEPUMP_OVERRIDE, currentFix, 3); // refer to AN440 for reasons
 
-	 ChangeRegister(REG_GPIO0_CONF, 0x0F); // tx/rx data clk pin
-	 ChangeRegister(REG_GPIO1_CONF, 0x00); // POR inverted pin
-	 ChangeRegister(REG_GPIO2_CONF, 0x1C); // clear channel pin
-	 */
-	ChangeRegister(REG_AFC_TIMING_CONTROL, 0x02); // refer to AN440 for reasons
-	ChangeRegister(REG_AFC_LIMITER, 0xFF); // write max value - excel file did that.
-	ChangeRegister(REG_AGC_OVERRIDE, 0x60); // max gain control
-	ChangeRegister(REG_AFC_LOOP_GEARSHIFT_OVERRIDE, 0x3C); // turn off AFC
-	ChangeRegister(REG_DATAACCESS_CONTROL, 0xAD); // enable rx packet handling, enable tx packet handling, enable CRC, use CRC-IBM
-	ChangeRegister(REG_HEADER_CONTROL1, 0x0C); // no broadcast address control, enable check headers for bytes 3 & 2
-	ChangeRegister(REG_HEADER_CONTROL2, 0x22);  // enable headers byte 3 & 2, no fixed package length, sync word 3 & 2
-	ChangeRegister(REG_PREAMBLE_LENGTH, 0x08); // 8 * 4 bits = 32 bits (4 bytes) preamble length
-	ChangeRegister(REG_PREAMBLE_DETECTION, 0x3A); // validate 7 * 4 bits of preamble  in a package
-	ChangeRegister(REG_SYNC_WORD3, 0x2D); // sync byte 3 val
-	ChangeRegister(REG_SYNC_WORD2, 0xD4); // sync byte 2 val
+		ChangeRegister(REG_GPIO0_CONF, 0x0F); // tx/rx data clk pin
+		ChangeRegister(REG_GPIO1_CONF, 0x00); // POR inverted pin
+		ChangeRegister(REG_GPIO2_CONF, 0x1C); // clear channel pin
+		*/
+		ChangeRegister(REG_AFC_TIMING_CONTROL, 0x02); // refer to AN440 for reasons
+		ChangeRegister(REG_AFC_LIMITER, 0xFF); // write max value - excel file did that.
+		ChangeRegister(REG_AGC_OVERRIDE, 0x60); // max gain control
+		ChangeRegister(REG_AFC_LOOP_GEARSHIFT_OVERRIDE, 0x3C); // turn off AFC
+		ChangeRegister(REG_DATAACCESS_CONTROL, 0xAD); // enable rx packet handling, enable tx packet handling, enable CRC, use CRC-IBM
+		ChangeRegister(REG_HEADER_CONTROL1, 0x0C); // no broadcast address control, enable check headers for bytes 3 & 2
+		ChangeRegister(REG_HEADER_CONTROL2, 0x22);  // enable headers byte 3 & 2, no fixed package length, sync word 3 & 2
+		ChangeRegister(REG_PREAMBLE_LENGTH, 0x08); // 8 * 4 bits = 32 bits (4 bytes) preamble length
+		ChangeRegister(REG_PREAMBLE_DETECTION, 0x3A); // validate 7 * 4 bits of preamble  in a package
+		ChangeRegister(REG_SYNC_WORD3, 0x2D); // sync byte 3 val
+		ChangeRegister(REG_SYNC_WORD2, 0xD4); // sync byte 2 val
 
-	ChangeRegister(REG_TX_POWER, 0x1F); // max power
+		ChangeRegister(REG_TX_POWER, 0x1F); // max power
 
-	ChangeRegister(REG_CHANNEL_STEPSIZE, 0x64); // each channel is of 1 Mhz interval
+		ChangeRegister(REG_CHANNEL_STEPSIZE, 0x64); // each channel is of 1 Mhz interval
 
-	setFrequency(_freqCarrier); // default freq
-	setBaudRate(_kbps); // default baud rate is 100kpbs
-	setChannel(_freqChannel); // default channel is 0
-	setCommsSignature(_packageSign); // default signature
+		setFrequency(_freqCarrier); // default freq
+		setBaudRate(_kbps); // default baud rate is 100kpbs
+		setChannel(_freqChannel); // default channel is 0
+		setCommsSignature(_packageSign); // default signature
+	}
 
 	switchMode(Ready);
 
